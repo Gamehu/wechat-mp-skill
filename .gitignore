@@ -4,4 +4,5 @@ config.yaml
 __pycache__/
 *.pyc
 .DS_Store
+docs/.DS_Store
 scripts/node_modules/

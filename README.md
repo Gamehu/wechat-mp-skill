@@ -1,8 +1,11 @@
 # wechat-mp-skill
 
 一个可独立发布的微信公众号草稿箱 Skill，适用于 OpenClaw，也可以直接通过命令行调用。
-
 注意先需要去公众号开发平台获取appid、appsecret以及配置**白名单**
+
+## 效果图
+
+![wechat-mp-skill demo](docs/images/demo.jpg)
 
 ## 仓库内容
 
