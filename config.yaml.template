@@ -1,0 +1,4 @@
+appid: "__FILL_ME_WECHAT_APPID__"
+appsecret: "__FILL_ME_WECHAT_APPSECRET__"
+default_author: "Gamehu"
+default_source_url: ""
