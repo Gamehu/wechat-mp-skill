@@ -2,6 +2,8 @@
 
 一个可独立发布的微信公众号草稿箱 Skill，适用于 OpenClaw，也可以直接通过命令行调用。
 
+注意先需要去公众号开发平台获取appid、appsecret以及配置**白名单**
+
 ## 仓库内容
 
 - `wechat_mp.py`: 微信公众号草稿箱 API 封装和 CLI
