@@ -4,7 +4,7 @@
   "description": "微信公众号草稿箱管理 Skill",
   "author": "Gamehu",
   "handler": "handler.py",
-  "requirements": ["requests", "pyyaml"],
+  "requirements": ["requests>=2.28.0", "pyyaml>=6.0"],
   "config": {
     "appid": "",
     "appsecret": "",

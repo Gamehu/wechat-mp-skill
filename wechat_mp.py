@@ -57,6 +57,10 @@ class WeChatMPSkill:
 
     def _request_json(self, method, url, *, ok_errcodes=None, **kwargs):
         ok_errcodes = {0} if ok_errcodes is None else set(ok_errcodes)
+        # 将 json= 参数手动序列化为 UTF-8，避免默认 ensure_ascii=True 导致中文乱码
+        if "json" in kwargs:
+            kwargs["data"] = json.dumps(kwargs.pop("json"), ensure_ascii=False).encode("utf-8")
+            kwargs.setdefault("headers", {})["Content-Type"] = "application/json"
         response = requests.request(method, url, timeout=30, **kwargs)
         response.raise_for_status()
 
@@ -189,8 +193,9 @@ class WeChatMPSkill:
             thumb_source=thumb_url,
         )
 
-        plain = re.sub(r"<[^>]+>", "", content or "")
-        draft_digest = digest or (plain[:100] + "..." if len(plain) > 100 else plain)
+        plain = re.sub(r"<[^>]+>", "", content or "").strip()
+        # WeChat digest 实测安全上限约 60 字节，以字符数截断更可靠
+        draft_digest = digest or (plain[:20] + "..." if len(plain) > 20 else plain)
 
         article = {
             "title": title,
