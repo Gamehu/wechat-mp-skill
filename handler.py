@@ -6,7 +6,6 @@ OpenClaw Skill 处理器
 import os
 import sys
 import re
-import json
 import shutil
 import subprocess
 import tempfile
@@ -52,23 +51,23 @@ class WeChatMPHandler:
         text = message.strip()
         
         # 发布草稿指令
-        if any(kw in text for kw in ["发布草稿", "创建草稿", "发草稿", "新建草稿"]):
+        if any(kw in text for kw in ["微信草稿", "发送微信草稿", "发布草稿"]):
             return self._handle_create_draft(text, attachments)
         
         # 查看草稿列表
-        elif any(kw in text for kw in ["草稿列表", "查看草稿", "我的草稿", "草稿箱"]):
+        elif "草稿列表" in text:
             return self._handle_list_drafts(text)
         
         # 删除草稿
-        elif any(kw in text for kw in ["删除草稿", "移除草稿"]):
+        elif "删除草稿" in text:
             return self._handle_delete_draft(text)
         
         # 统计草稿
-        elif any(kw in text for kw in ["草稿数量", "草稿统计", "统计草稿"]):
+        elif "草稿数量" in text:
             return self._handle_count_drafts()
         
         # 帮助
-        elif any(kw in text for kw in ["微信帮助", "公众号帮助", "wechat help"]):
+        elif "微信草稿帮助" in text:
             return self._get_help()
         
         else:
@@ -201,12 +200,21 @@ class WeChatMPHandler:
             return f"❌ 获取统计失败：{e}"
     
     def _format_for_wechat(self, text: str) -> str:
-        """Markdown -> 微信公众号 HTML（优先调用 markdown-to-wx-html 脚本）"""
+        """内容转微信公众号 HTML。
+        - 明确 HTML 输入：原样返回
+        - Markdown 输入：必须使用 wx 转换脚本（缺依赖时给出明确报错）
+        """
+        if self._looks_like_html(text):
+            return text
+
         node = shutil.which('node')
         script = SKILL_DIR / 'scripts' / 'convert_markdown_to_wx_html.mjs'
 
         if not node or not script.exists():
-            return self._markdown_to_html(text)
+            raise WeChatMPError(
+                "Markdown 样式转换器不可用：缺少 node 或 scripts/convert_markdown_to_wx_html.mjs。"
+                "请执行：cd scripts && npm ci"
+            )
 
         with tempfile.NamedTemporaryFile('w', suffix='.md', delete=False, encoding='utf-8') as md_file:
             md_file.write(text or '')
@@ -231,9 +239,15 @@ class WeChatMPHandler:
                 if html:
                     return html
 
-            return self._markdown_to_html(text)
-        except Exception:
-            return self._markdown_to_html(text)
+            reason = (proc.stderr or proc.stdout or '').strip()
+            raise WeChatMPError(
+                "Markdown 样式转换失败。请先执行：cd scripts && npm ci。"
+                + (f" 详细错误：{reason[:200]}" if reason else "")
+            )
+        except WeChatMPError:
+            raise
+        except Exception as e:
+            raise WeChatMPError(f"Markdown 样式转换失败：{e}")
         finally:
             try:
                 os.unlink(md_path)
@@ -243,6 +257,12 @@ class WeChatMPHandler:
                 os.unlink(html_path)
             except Exception:
                 pass
+
+    def _looks_like_html(self, text: str) -> bool:
+        """简单判断输入是否已是 HTML。"""
+        if not text:
+            return False
+        return bool(re.search(r'<[a-zA-Z][^>]*>', text))
 
     def _markdown_to_html(self, text: str) -> str:
         """简单 Markdown 转 HTML"""

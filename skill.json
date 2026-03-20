@@ -13,22 +13,26 @@
   },
   "commands": [
     {
-      "pattern": "发布草稿|创建草稿|发草稿|新建草稿",
+      "pattern": "微信草稿|发送微信草稿|发布草稿",
       "description": "创建微信公众号图文草稿",
       "example": "发布草稿\n标题：OpenClaw 使用指南\n内容：OpenClaw 是一个..."
     },
     {
-      "pattern": "草稿列表|查看草稿|我的草稿|草稿箱",
+      "pattern": "草稿列表",
       "description": "查看草稿箱列表"
     },
     {
-      "pattern": "删除草稿|移除草稿",
+      "pattern": "删除草稿",
       "description": "删除指定草稿",
       "example": "删除草稿 MEDIA_ID"
     },
     {
-      "pattern": "草稿数量|草稿统计",
+      "pattern": "草稿数量",
       "description": "获取草稿箱统计"
+    },
+    {
+      "pattern": "微信草稿帮助",
+      "description": "查看微信草稿 Skill 帮助"
     }
   ]
 }
