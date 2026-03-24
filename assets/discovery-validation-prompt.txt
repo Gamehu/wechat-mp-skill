@@ -1,0 +1,10 @@
+I am building an agent skill. Agents will decide whether to load this skill based only on the YAML metadata below.
+
+name: wechat-mp-skill
+description: Use when the agent needs to create, inspect, count, or delete WeChat Official Account drafts, convert Markdown to WeChat-compatible HTML, or troubleshoot 40164, 40001, token cache, and cover upload failures. Do not use for final publish flows, non-WeChat CMS tasks, or advanced custom layout design.
+
+Based strictly on this metadata:
+1. Generate 3 realistic user prompts that should definitely trigger this skill.
+2. Generate 3 realistic user prompts that sound similar but should definitely not trigger this skill.
+3. Critique the description for false positives, false negatives, and missing negative triggers.
+4. Rewrite the description only if the routing can be made more precise.

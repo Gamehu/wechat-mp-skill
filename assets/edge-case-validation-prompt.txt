@@ -1,0 +1,12 @@
+Act as a ruthless QA reviewer for this WeChat draft skill.
+Do not fix anything yet.
+Ask 5 specific questions that could break the skill or expose missing fallbacks.
+Focus on edge cases like:
+- The user provides only a title and no body.
+- The user says 微信草稿帮助 and the router accidentally treats it as draft creation.
+- The cover image URL is unreachable from the runtime environment.
+- The WeChat material library is empty and no explicit cover is provided.
+- Markdown conversion dependencies are missing.
+- The token cache is stale after credential rotation.
+
+Your output must be a numbered list of questions only.

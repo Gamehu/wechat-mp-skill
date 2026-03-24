@@ -1,7 +1,7 @@
 {
   "name": "wechat-mp",
   "version": "1.0.0",
-  "description": "微信公众号草稿箱管理 Skill",
+  "description": "创建、查询、删除微信公众号草稿，并处理 Markdown 转换、封面上传、40164/40001 等常见故障；不用于直接发布或复杂排版。",
   "author": "Gamehu",
   "handler": "handler.py",
   "requirements": ["requests>=2.28.0", "pyyaml>=6.0"],
@@ -18,7 +18,7 @@
       "example": "发布草稿\n标题：OpenClaw 使用指南\n内容：OpenClaw 是一个..."
     },
     {
-      "pattern": "草稿列表",
+      "pattern": "草稿列表|查看草稿",
       "description": "查看草稿箱列表"
     },
     {
@@ -31,7 +31,7 @@
       "description": "获取草稿箱统计"
     },
     {
-      "pattern": "微信草稿帮助",
+      "pattern": "微信草稿帮助|草稿帮助",
       "description": "查看微信草稿 Skill 帮助"
     }
   ]

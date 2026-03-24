@@ -1,127 +1,89 @@
 ---
 name: wechat-mp-skill
-description: Use when 需要通过对话或命令行创建、查询、删除微信公众号草稿，或排查草稿发布失败、封面上传失败、40164/40001 等常见问题
+description: Use when the agent needs to create, inspect, count, or delete WeChat Official Account drafts, convert Markdown to WeChat-compatible HTML, or troubleshoot 40164, 40001, token cache, and cover upload failures. Do not use for final publish flows, non-WeChat CMS tasks, or advanced custom layout design.
 ---
 
 # WeChat MP Draft Skill
 
-用于把 Markdown/HTML 内容安全发布到微信公众号草稿箱，并提供列表、删除、统计与故障排查能力。
+Create and manage WeChat Official Account drafts with a deterministic flow.
+Use this skill to turn source content into a draft, inspect draft state, and recover from the common operational failures around tokens, cover images, and Markdown conversion.
 
-## Skill 类型
+## When To Use
 
-`Business Process & Team Automation`（主） + `Runbook`（辅）。
-目标是把“写内容 -> 转换 -> 发草稿 -> 失败排查”压缩成稳定流程。
+1. Use this skill when the request is about WeChat Official Account draft creation or draft-box operations.
+2. Use this skill when the request mentions Markdown-to-WeChat HTML conversion or common WeChat draft API failures such as `40164` or `40001`.
+3. Do not use this skill for final publish/release flows, non-WeChat content systems, or custom visual design work.
 
-## 何时使用
+## Workflow
 
-- 你要快速创建公众号草稿，避免手工进后台粘贴内容。
-- 你要把 Markdown 转为微信公众号更兼容的 HTML。
-- 你遇到这些症状：
-- `40164`（IP 白名单未配置）
-- `40001`（access_token 无效）
-- 封面上传失败 / 没传封面时自动选图失败
-- 你需要批量查看或删除草稿。
+1. Identify the requested operation.
+If the user wants to create a draft, continue to Step 2.
+If the user wants to list, count, or delete drafts, skip to Step 6.
+If the user asks for troubleshooting only, skip to Step 8.
 
-## 不适用场景
+2. Validate local prerequisites before creating a draft.
+Check that `config.yaml` exists and contains `appid` and `appsecret`.
+If Markdown input is expected, verify the converter exists at `scripts/convert_markdown_to_wx_html.mjs` and dependencies are installed with `cd scripts && npm ci`.
 
-- 你要“直接发布上线”而不是“创建草稿”（本 Skill 不负责发布接口）。
-- 你要复杂排版（多列、复杂卡片、深度样式调优）；此时建议先在专门排版工具处理。
+3. Normalize the input into the supported command contract.
+Use the request shapes in `references/command-contract.md`.
+If the input contains only a title and no body, treat that as incomplete input and ask for content unless the user explicitly wants the title duplicated as the body.
 
-## 快速流程
+4. Prepare content for the WeChat draft API.
+If the content is already HTML, pass it through unchanged.
+If the content is Markdown, run the converter script instead of generating ad-hoc HTML.
+If the user provided a cover image, pass its local path or URL through the draft creation flow.
 
-1. 准备配置（`config.yaml`）。
-2. 用“发布草稿”或 CLI 创建草稿。
-3. 失败时按 `Gotchas` 和“故障排查”定位。
-4. 用“草稿列表 / 删除草稿 / 草稿数量”做后续管理。
+5. Create the draft and report the result.
+Run `python3 wechat_mp.py draft --title "..." --content "..."` for CLI flows, or let `handler.py` route the request in chat flows.
+Return the title and resulting `media_id`.
+If creation fails, continue to Step 8.
 
-## 配置前置
+6. Handle draft-box management requests deterministically.
+For list requests, use `草稿列表` or `查看草稿` semantics and return the formatted list.
+For count requests, use `python3 wechat_mp.py count` or the handler count route.
+For delete requests, require an explicit `media_id` before deleting.
 
-1. 微信公众号（订阅号或服务号）
-2. 已开启开发者模式
-3. 已获取 AppID / AppSecret
-4. 已在公众号后台配置服务器出口 IP 白名单
+7. Use progressive disclosure for implementation details.
+Read `references/command-contract.md` for supported chat and CLI shapes.
+Read `references/troubleshooting.md` only when the request is about failures or recovery.
+Read `handler.py` only when you need routing details.
+Read `wechat_mp.py` only when you need API, cache, or upload behavior.
 
-首次使用：
+8. Troubleshoot by matching the failure mode.
+For `40164`, follow the IP whitelist recovery path in `references/troubleshooting.md`.
+For `40001`, validate credentials first and then clear `.cache/token_cache.json` if needed.
+For cover upload failures, distinguish between missing local files, inaccessible remote URLs, and an empty material library.
+For Markdown conversion failures, require Node and the converter dependencies instead of silently degrading output quality.
 
-```bash
-cp config.yaml.template config.yaml
-```
+## Quick Reference
 
-最小配置：
+- Create draft: `发布草稿` or `python3 wechat_mp.py draft --title "标题" --content "<p>正文</p>"`
+- List drafts: `草稿列表`, `查看草稿`, or `python3 wechat_mp.py list --count 5`
+- Count drafts: `草稿数量` or `python3 wechat_mp.py count`
+- Delete draft: `删除草稿 MEDIA_ID` or `python3 wechat_mp.py delete --media-id MEDIA_ID`
+- Help: `微信草稿帮助` or `草稿帮助`
 
-```yaml
-appid: "wx_your_appid_here"
-appsecret: "your_appsecret_here"
-default_author: "Your Name"
-default_source_url: ""
-```
+## Common Mistakes
 
-## 使用方式
+- Treating this skill as a publish-to-production workflow. It only creates and manages drafts.
+- Letting Markdown silently fall back to weak HTML conversion. Use the converter script or fail clearly.
+- Relying on the default cover image in production. An empty material library will break draft creation.
+- Mixing generic “微信草稿” wording into unrelated chat. Use the exact command phrases when routing matters.
 
-### 对话指令（OpenClaw / Telegram）
+## Validation
 
-创建草稿（支持 Markdown）：
+- For discovery validation, use `assets/discovery-validation-prompt.txt`.
+- For workflow validation, use `assets/logic-validation-prompt.txt`.
+- For failure-mode review, use `assets/edge-case-validation-prompt.txt`.
 
-```text
-发布草稿
-标题：文章标题
-内容：文章内容（支持 Markdown）
-```
+## Files
 
-查看草稿：
-
-```text
-草稿列表
-```
-
-删除草稿：
-
-```text
-删除草稿 MEDIA_ID
-```
-
-统计数量：
-
-```text
-草稿数量
-```
-
-### CLI
-
-```bash
-python3 wechat_mp.py test
-python3 wechat_mp.py count
-python3 wechat_mp.py list --count 5
-python3 wechat_mp.py draft --title "标题" --content "<p>正文</p>"
-python3 wechat_mp.py delete --media-id MEDIA_ID
-```
-
-## 渐进式披露（Progressive Disclosure）
-
-- 常规使用：先读本文件即可。
-- 需要看执行细节：再看 `handler.py`（消息解析与回退逻辑）。
-- 需要看 API 与 token/cache 行为：再看 `wechat_mp.py`。
-- 需要看 Markdown 转换质量：再看 `scripts/convert_markdown_to_wx_html.mjs`。
-
-## Gotchas（高价值）
-
-1. 不传封面时会尝试使用素材库第一张图片；素材库为空会失败。  
-建议：生产环境明确传封面，避免依赖“默认首图”。
-2. Markdown 转换依赖 Node + `marked`；缺依赖时现在会直接报错（不再静默降级），避免“成功但样式错”。  
-建议：部署时先执行 `cd scripts && npm ci`。
-3. “草稿箱”是高频词，容易与普通聊天语境重叠触发。  
-建议：优先使用“草稿列表 / 草稿数量”等更明确命令。
-4. 只给标题不写内容时，系统会把标题作为正文。  
-建议：在流程里显式校验“内容是否为空”。
-5. `40001` 可能来自错误密钥，也可能来自旧缓存。  
-建议：先校验 `config.yaml`，再清理 `.cache/token_cache.json` 重试。
-
-## 故障排查
-
-### 错误 40164：IP 不在白名单
-
-在微信公众号后台「开发 -> 基本配置 -> IP 白名单」中添加当前服务器公网 IP。
-
-### 错误 40001：access_token 无效
-
-检查 AppSecret 是否正确，必要时删除 `.cache/token_cache.json` 后重试。
+- Command contract: `references/command-contract.md`
+- Failure recovery: `references/troubleshooting.md`
+- Discovery validation: `assets/discovery-validation-prompt.txt`
+- Workflow validation: `assets/logic-validation-prompt.txt`
+- Edge-case validation: `assets/edge-case-validation-prompt.txt`
+- Chat router: `handler.py`
+- API implementation: `wechat_mp.py`
+- Markdown converter: `scripts/convert_markdown_to_wx_html.mjs`

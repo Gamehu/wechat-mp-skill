@@ -20,6 +20,11 @@ from wechat_mp import WeChatMPSkill, WeChatMPError
 
 class WeChatMPHandler:
     """OpenClaw Telegram Bot 处理器"""
+    CREATE_DRAFT_COMMANDS = ("微信草稿", "发送微信草稿", "发布草稿")
+    LIST_DRAFT_COMMANDS = ("草稿列表", "查看草稿")
+    HELP_COMMANDS = ("微信草稿帮助", "草稿帮助")
+    DELETE_DRAFT_COMMANDS = ("删除草稿", "移除草稿")
+    COUNT_DRAFT_COMMANDS = ("草稿数量",)
     
     def __init__(self):
         self.skill = None
@@ -49,29 +54,37 @@ class WeChatMPHandler:
             return "❌ 微信公众号 Skill 未配置，请检查 AppID 和 AppSecret"
         
         text = message.strip()
-        
+
+        # 帮助
+        if self._matches_command(text, self.HELP_COMMANDS):
+            return self._get_help()
+
+        # 查看草稿列表
+        elif self._matches_command(text, self.LIST_DRAFT_COMMANDS):
+            return self._handle_list_drafts(text)
+
         # 发布草稿指令
-        if any(kw in text for kw in ["微信草稿", "发送微信草稿", "发布草稿"]):
+        elif self._matches_command(text, self.CREATE_DRAFT_COMMANDS):
             return self._handle_create_draft(text, attachments)
         
-        # 查看草稿列表
-        elif "草稿列表" in text:
-            return self._handle_list_drafts(text)
-        
         # 删除草稿
-        elif "删除草稿" in text:
+        elif self._matches_command(text, self.DELETE_DRAFT_COMMANDS):
             return self._handle_delete_draft(text)
         
         # 统计草稿
-        elif "草稿数量" in text:
+        elif self._matches_command(text, self.COUNT_DRAFT_COMMANDS):
             return self._handle_count_drafts()
-        
-        # 帮助
-        elif "微信草稿帮助" in text:
-            return self._get_help()
-        
+
         else:
             return None  # 不处理，让其他 skill 处理
+
+    def _matches_command(self, text: str, commands: tuple[str, ...]) -> bool:
+        """命令匹配：支持精确匹配和“命令 + 换行参数”的格式。"""
+        normalized = text.strip()
+        return any(
+            normalized == command or normalized.startswith(f"{command}\n")
+            for command in commands
+        )
     
     def _handle_create_draft(self, text: str, attachments: list = None) -> str:
         """处理创建草稿请求"""
@@ -115,7 +128,14 @@ class WeChatMPHandler:
 可选：附带封面图片"""
             
             if not content:
-                content = title  # 如果只有标题，内容使用标题
+                return """❌ 缺少内容
+
+请使用以下格式：
+发布草稿
+标题：你的文章标题
+内容：文章内容（支持 Markdown/HTML）
+
+可选：附带封面图片"""
             
             # 转换 Markdown 为微信公众号友好的 HTML（优先使用 markdown-to-wx-html）
             content_html = self._format_for_wechat(content)
@@ -325,7 +345,7 @@ class WeChatMPHandler:
 
 💡 **提示**：
 - 标题最多 64 字节
-- 内容支持 Markdown 语法
+- 内容必填，支持 Markdown 语法
 - 可以附带图片作为封面
 - 创建的草稿可以在公众号后台编辑后发布
 """

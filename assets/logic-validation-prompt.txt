@@ -1,0 +1,20 @@
+Here is the directory structure for my skill:
+- SKILL.md
+- references/command-contract.md
+- references/troubleshooting.md
+- handler.py
+- wechat_mp.py
+- scripts/convert_markdown_to_wx_html.mjs
+
+Act as an autonomous agent that has just loaded this skill.
+Simulate the exact step-by-step execution for this user request:
+
+发布草稿
+标题：OpenClaw 使用指南
+内容：# OpenClaw\n\n这是一个测试。
+
+For each step:
+1. State what you are doing.
+2. State which file you need to read, if any.
+3. Flag any execution blocker where the skill forces you to guess.
+4. Identify any place where the workflow is not deterministic enough.

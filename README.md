@@ -1,104 +1,91 @@
 # wechat-mp-skill
 
-一个可独立发布的微信公众号草稿箱 Skill，适用于 OpenClaw，也可以直接通过命令行调用。
-注意先需要去公众号开发平台获取appid、appsecret以及配置**白名单**
+一个用于创建和管理微信公众号草稿箱的 Skill，既可通过聊天命令使用，也可直接通过 CLI 调用。
+它覆盖草稿创建、查询、计数、删除、Markdown 转微信公众号兼容 HTML，以及 `40164`、`40001`、token 缓存和封面上传失败等常见问题。
 
-## 效果图
+## 适用场景
 
-![wechat-mp-skill demo](docs/images/demo.jpg)
+适用于：
+- 把 Markdown 或 HTML 内容创建为微信公众号草稿
+- 查询、统计、删除草稿箱内容
+- 排查常见微信公众号草稿接口错误
 
-## 仓库内容
+不适用于：
+- 最终发布或上线流程
+- 非微信公众号内容系统
+- 复杂视觉排版或深度样式设计
 
-- `wechat_mp.py`: 微信公众号草稿箱 API 封装和 CLI
-- `handler.py`: OpenClaw Skill 入口
-- `skill.json`: Skill 元信息
-- `config.yaml.template`: 配置模板
-- `scripts/convert_markdown_to_wx_html.mjs`: Markdown 转微信兼容 HTML
-- `deploy.sh`: 部署到 OpenClaw 服务器的示例脚本
+## 仓库结构
 
-## 已做的安全处理
+- `SKILL.md`：面向 agent 的触发条件和执行流程
+- `references/command-contract.md`：聊天命令与 CLI 的精确契约
+- `references/troubleshooting.md`：常见故障处理说明
+- `handler.py`：聊天命令路由入口
+- `wechat_mp.py`：微信公众号 API 封装和 CLI
+- `scripts/convert_markdown_to_wx_html.mjs`：Markdown 转微信兼容 HTML
+- `assets/*.txt`：用于 discovery / logic / edge-case 验证的提示词模板
 
-- 未包含真实 `appid` / `appsecret`
-- 所有敏感配置均通过 `config.yaml` 本地填写
-- token 缓存默认写入仓库内 `.cache/`，已加入 `.gitignore`
-
-## 快速开始
-
-### 1. 安装依赖
+## 最小安装
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-cd scripts
-npm ci
-cd ..
-```
-
-### 2. 配置微信公众号参数
-
-```bash
+cd scripts && npm ci && cd ..
 cp config.yaml.template config.yaml
 ```
 
-编辑 `config.yaml`：
+填写 `config.yaml`：
 
 ```yaml
-appid: "__FILL_ME_WECHAT_APPID__"
-appsecret: "__FILL_ME_WECHAT_APPSECRET__"
+appid: "wx_your_appid_here"
+appsecret: "your_appsecret_here"
 default_author: "Your Name"
 default_source_url: ""
 ```
 
-### 3. 验证连接
+## 最小使用方式
+
+CLI：
 
 ```bash
 python3 wechat_mp.py test
 python3 wechat_mp.py count
+python3 wechat_mp.py draft --title "测试文章" --content "<p>这是一篇测试草稿</p>"
+python3 wechat_mp.py list --count 5
+python3 wechat_mp.py delete --media-id MEDIA_ID
 ```
 
-### 4. 创建草稿
+聊天命令：
 
-```bash
-python3 wechat_mp.py draft \
-  --title "测试文章" \
-  --content "<p>这是一篇测试草稿</p>"
+```text
+发布草稿
+标题：文章标题
+内容：文章内容（支持 Markdown 或 HTML）
 ```
 
-指定封面图片时，`--thumb` 支持三种形式：
+其他支持的命令：
+- `草稿列表`
+- `查看草稿`
+- `草稿数量`
+- `删除草稿 MEDIA_ID`
+- `微信草稿帮助`
+- `草稿帮助`
 
-- 已有素材 `media_id`
-- 本地图片路径
-- `http(s)` 图片 URL
+创建草稿的触发词必须是完整命令，例如 `微信草稿`、`发送微信草稿` 或 `发布草稿`。不会对裸 `草稿` 这类更短字符串触发创建流程。
 
-例如：
+## Validation Prompts 怎么用
 
-```bash
-python3 wechat_mp.py draft \
-  --title "带封面的文章" \
-  --content "<p>正文</p>" \
-  --thumb ./cover.jpg
-```
+`assets/` 目录下的文本文件不是运行时代码，而是手动拿去喂给 LLM 的验证模板：
 
-## 集成 OpenClaw
+- `assets/discovery-validation-prompt.txt`：检查 frontmatter 是否容易被正确触发
+- `assets/logic-validation-prompt.txt`：检查 workflow 是否足够确定、会不会逼 agent 猜步骤
+- `assets/edge-case-validation-prompt.txt`：专门追问失败路径和边界条件
 
-1. 将整个目录复制到 OpenClaw skills 目录，例如 `/root/.openclaw/skills/wechat-mp-skill`
-2. 复制 `config.yaml.template` 为 `config.yaml` 并填写真实参数
-3. 执行：
+建议在每次修改 `SKILL.md`、`skill.json` 或命令契约后，至少手动跑一轮这三类验证。
 
-```bash
-python3 -m pip install -r requirements.txt
-cd scripts && npm ci
-```
+## 下一步看哪里
 
-4. 在 OpenClaw 中加载该 skill
-
-## 常见问题
-
-### 为什么 `python3 wechat_mp.py test` 报 40164？
-
-公众号后台没有把当前服务器公网 IP 加入白名单。
-
-### 为什么提示素材库中没有图片？
-
-当你没有提供 `--thumb` 或消息附件时，skill 会尝试使用公众号素材库中的第一张图片作为默认封面。请先在公众号后台上传一张图片素材。
+- 看 `SKILL.md`：理解 agent 侧执行流程
+- 看 `references/command-contract.md`：查看精确输入契约和命令优先级
+- 看 `references/troubleshooting.md`：查看 `40164`、`40001`、Markdown 转换和封面失败的处理方式
